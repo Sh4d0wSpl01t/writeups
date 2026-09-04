@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>0xWriteups :: CTF Logs</title>
+<meta name="description" content="VulnHub & TryHackMe machine writeups.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/1nd3x.css">
+</head>
+<body>
+
+<div class="crt-overlay"></div>
+<div class="vignette"></div>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="#" class="logo"><span class="bracket">[</span><span class="core">0xWriteups</span><span class="bracket">]</span><span class="cursor-blink"></span></a>
+    <nav class="links">
+      <a href="#writeups">writeups</a>
+      <div class="term-clock" id="term-clock" aria-live="off">
+        <div class="tc-line">┬─[Sh4d0wSpl01t@3xpl0174bl3:~]─[<span id="clock-time">00:00:00 AM</span>]</div>
+        <div class="tc-line">╰─&gt;$<span class="tc-cursor"></span></div>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <canvas id="matrix-canvas"></canvas>
+  <div class="hero-inner">
+    <div class="term-window">
+      <div class="term-titlebar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="term-path">root@kali: ~/writeups</span>
+      </div>
+      <div class="term-body">
+        <div class="term-line"><span class="prompt">root<span class="at">@</span>kali</span>:~$ <span id="typed-line" class="type-out"></span></div>
+      </div>
+    </div>
+
+    <h1 class="hero-title">Machines rooted.<br>Notes <span class="accent">kept.</span></h1>
+    <p class="hero-sub">A running log of VulnHub and TryHackMe boxes — enumeration steps, exploitation paths, and privesc, written up as I go.</p>
+
+    <div class="hero-stats">
+      <div class="stat"><div class="n" id="stat-total">0</div><div class="l">writeups</div></div>
+      <div class="stat"><div class="n" id="stat-thm">0</div><div class="l">tryhackme</div></div>
+      <div class="stat"><div class="n" id="stat-vh">0</div><div class="l">vulnhub</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="controls">
+  <div class="filter-group" id="filter-group">
+    <button class="chip active" data-filter="all">all</button>
+    <button class="chip" data-filter="thm">tryhackme</button>
+    <button class="chip" data-filter="vh">vulnhub</button>
+  </div>
+  <div class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="search-input" type="text" placeholder="grep writeup --title --tag">
+  </div>
+</div>
+
+<main id="writeups">
+  <div class="grid" id="card-grid"></div>
+  <div class="empty-state" id="empty-state">
+    <span class="glitch">$ 404</span> — no matches. try clearing filters.
+  </div>
+</main>
+
+<div class="reader" id="reader">
+  <div class="reader-hero">
+    <div class="reader-hero-inner">
+      <button class="reader-back" id="reader-back">&larr; back to writeups</button>
+      <div class="reader-eyebrow" id="reader-eyebrow"></div>
+      <h1 class="reader-title" id="reader-title"></h1>
+      <div class="reader-meta" id="reader-meta"></div>
+      <div class="reader-tags" id="reader-tags"></div>
+    </div>
+  </div>
+  <div class="reader-layout">
+    <aside class="reader-sidebar">
+      <details class="toc" id="toc-details" open>
+        <summary class="toc-summary">Contents</summary>
+        <div class="toc-eyebrow">on this page</div>
+        <nav class="toc-list" id="toc-list"></nav>
+      </details>
+    </aside>
+    <article class="reader-article" id="reader-article"></article>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <span>&copy; <span id="year"></span> 0xWriteups - a collection of writeups.</span>
+    <div class="footer-links">
+      <a href="https://github.com/" id="github-link-2">GitHub</a>
+      <a href="https://tryhackme.com/" >TryHackMe</a>
+      <a href="https://www.vulnhub.com/">VulnHub</a>
+    </div>
+  </div>
+</footer>
+<script src="/static/js/1nd3x.js"></script>
+</body>
+</html>
