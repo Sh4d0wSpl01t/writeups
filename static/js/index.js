@@ -6,8 +6,8 @@
    ========================================================= */
 const WRITEUPS = [
   {
-    slug: "Brooklyn Nine-Nine",
-    title: "Brooklyn Nine-Nine",
+    slug: "blue",
+    title: "Blue",
     platform: "thm",
     difficulty: "easy",
     date: "2026-01-12",
@@ -16,8 +16,8 @@ const WRITEUPS = [
     url: "#"
   },
   {
-    slug: "ColdBox",
-    title: "ColdBox",
+    slug: "kenobi",
+    title: "Kenobi",
     platform: "thm",
     difficulty: "easy",
     date: "2026-01-20",
@@ -52,8 +52,7 @@ const WRITEUPS = [
       { type: "code", lang: "bash", code: "nmap -sC -sV -oN nmap-initial.txt 10.10.x.x" },
       { type: "image", src: "static/assets/mr-robot/nmap-scan.png", alt: "nmap scan", caption: "nmap scan on the target IP" },
       { type: "p", text: "Scan Results:" },
-      { type: "image", src: "static/assets/mr-robot/nmap-scan-results.png", alt: "nmap scan results", caption: "nmap scan results against the target IP" }, 
-
+      { type: "image", src: "static/assets/mr-robot/nmap-scan-results.png", alt: "nmap scan results", caption: "nmap scan results against the target IP" },
 
       { type: "h2", icon: "&#128193;", text: "Phase 2: Web Enumeration \u2014 the robots.txt discovery" },
       { type: "p", text: "The landing page looks stylish, but the real treasure is in hidden directories. Time to brute-force them." },
@@ -102,14 +101,14 @@ const WRITEUPS = [
       { type: "image", src: "static/assets/mr-robot/suid-find.png", alt: "SUID binaries found on the system", caption: "nmap turns up as an unexpected SUID binary" },
       { type: "p", text: "nmap's interactive mode allows shelling out — and since it runs as root, that gives us a root shell." },
       { type: "code", lang: "bash", code: "nmap --interactive\n!sh" },
-      { type: "video", src: "static/assets/mr-robot/mr-robot.mp4", caption: "Full nmap SUID privesc to root, captured live" },
       { type: "code", lang: "bash", code: "cd /root\nls\ncat key-3-of-3.txt" },
-      { type: "p", text: "All three keys captured — box rooted." }
+      { type: "p", text: "All three keys captured — box rooted." },
+      { type: "video", src: "static/assets/mr-robot/root-privesc.mp4", caption: "Full nmap SUID privesc to root, captured live" }
     ]
   },
   {
-    slug: "mKingdom",
-    title: "mKingdom",
+    slug: "wonderland",
+    title: "Wonderland",
     platform: "thm",
     difficulty: "medium",
     date: "2026-02-15",
@@ -128,8 +127,8 @@ const WRITEUPS = [
     url: "#"
   },
   {
-    slug: "Breakout",
-    title: "Breakout",
+    slug: "wreath-network",
+    title: "Wreath Network",
     platform: "thm",
     difficulty: "hard",
     date: "2026-03-22",
@@ -172,6 +171,33 @@ function updateClock(){
 }
 updateClock();
 setInterval(updateClock, 1000);
+
+/* ---------- header prompt: typing "cat root-flag.txt" on a loop ---------- */
+const tcTypedEl = document.getElementById("tc-typed");
+const TC_COMMAND = "cat root-flag.txt";
+let tcIndex = 0, tcDeleting = false;
+
+function tcTypeLoop(){
+  if (!tcDeleting){
+    tcIndex++;
+    tcTypedEl.textContent = TC_COMMAND.slice(0, tcIndex);
+    if (tcIndex === TC_COMMAND.length){
+      tcDeleting = true;
+      setTimeout(tcTypeLoop, 1600);
+      return;
+    }
+  } else {
+    tcIndex--;
+    tcTypedEl.textContent = TC_COMMAND.slice(0, tcIndex);
+    if (tcIndex === 0){
+      tcDeleting = false;
+      setTimeout(tcTypeLoop, 400);
+      return;
+    }
+  }
+  setTimeout(tcTypeLoop, tcDeleting ? 35 : 70);
+}
+tcTypeLoop();
 
 /* ---------- render cards ---------- */
 const grid = document.getElementById("card-grid");
