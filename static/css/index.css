@@ -96,10 +96,10 @@
   }
   .term-clock .tc-line{white-space:pre;}
   .term-clock #clock-time{color:var(--green); font-weight:700;}
-  .tc-cursor{
+  .tc-typed{color:var(--green); font-weight:700;}
+  .tc-caret{
     display:inline-block; width:6px; height:11px; background:var(--green);
-    margin-left:5px; vertical-align:-1px;
-    animation:blink 1.05s steps(1) infinite;
+    margin-left:2px; vertical-align:-1px;
     box-shadow:0 0 6px var(--green);
   }
 
