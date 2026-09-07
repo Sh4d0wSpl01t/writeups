@@ -39,7 +39,7 @@ function tcTypeLoop(){
 }
 tcTypeLoop();
 
-/* ---------- image / video fallback ---------- */
+/* ---------- image fallback ---------- */
 function mediaMissing(el){
   const wrap = el.closest(".rc-media");
   if (wrap) wrap.classList.add("missing");
