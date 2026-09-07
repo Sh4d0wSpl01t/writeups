@@ -254,20 +254,6 @@ function renderBlock(block, i){
           </div>
           ${block.caption ? `<figcaption class="rc-caption">${escapeHtml(block.caption)}</figcaption>` : ""}
         </figure>`;
-    case "video":
-      return `
-        <figure class="rc-media" id="rc-media-${i}">
-          <div class="rc-media-frame">
-            <video controls onerror="document.getElementById('rc-media-${i}').classList.add('missing')">
-              <source src="${block.src}">
-            </video>
-            <div class="rc-media-fallback">
-              <strong>Video not found</strong>
-              <small>expected at: ${escapeHtml(block.src)}</small>
-            </div>
-          </div>
-          ${block.caption ? `<figcaption class="rc-caption">${escapeHtml(block.caption)}</figcaption>` : ""}
-        </figure>`;
     default:
       return "";
   }
