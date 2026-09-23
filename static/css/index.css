@@ -231,6 +231,7 @@
   .platform-dot{width:7px; height:7px; border-radius:50%;}
   .platform-dot.thm{background:var(--cyan); box-shadow:0 0 6px var(--cyan);}
   .platform-dot.vh{background:var(--magenta); box-shadow:0 0 6px var(--magenta);}
+  .platform-dot.hmv{background:var(--amber); box-shadow:0 0 6px var(--amber);}
   .difficulty{
     padding:2px 9px; border-radius:20px; font-size:10px; font-weight:700; letter-spacing:.03em;
     border:1px solid currentColor;
@@ -260,9 +261,10 @@
     background:#191919; border-bottom:1px solid var(--border);
   }
   .card-cover{
-    position:absolute; inset:0; width:100%; height:100%; object-fit:contain;
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
     transition:transform .25s ease;
   }
+  .card-cover-wrap.fit-contain .card-cover{ object-fit:contain; }
   .card:hover .card-cover{ transform:scale(1.05); }
   .card-cover-fallback{
     display:none; position:absolute; inset:0; flex-direction:column;
@@ -359,10 +361,12 @@
   .toc-list a .toc-icon{ font-size:13px; flex-shrink:0; }
   .toc-list a:hover{ color:var(--text); }
   .toc-list a.active{ color:var(--green); border-left-color:var(--green); text-shadow:0 0 8px rgba(0,255,106,.35); }
+  .toc-list a.sub{ padding-left:30px; font-size:11px; }
 
   .reader-article{ max-width:700px; min-width:0; }
   .rc-h2{ font-size:19px; font-weight:700; color:var(--green-soft); margin:34px 0 12px; text-shadow:0 0 10px rgba(0,255,106,.2); scroll-margin-top:90px; }
   .rc-h2 .h2-icon{ margin-right:8px; }
+  .rc-h3{ font-size:14.5px; font-weight:700; color:var(--text); margin:24px 0 10px; padding-left:12px; border-left:2px solid var(--green-dim); scroll-margin-top:90px; }
   .rc-p{ font-size:14.5px; color:var(--text); margin:0 0 16px; line-height:1.7; }
   .rc-p code, .rc-list li code{
     background:var(--green-dim); color:var(--green-soft); padding:1px 6px; border-radius:3px; font-size:.92em;
@@ -404,7 +408,8 @@
 
   .reader-cover{ margin-bottom:28px; }
   .reader-cover .rc-media-frame{ aspect-ratio:21/9; background:#191919; }
-  .reader-cover .rc-media-frame img{ width:100%; height:100%; object-fit:contain; }
+  .reader-cover .rc-media-frame img{ width:100%; height:100%; object-fit:cover; }
+  .reader-cover.fit-contain .rc-media-frame img{ object-fit:contain; }
   @media (max-width:640px){
     .reader-cover .rc-media-frame{ aspect-ratio:16/9; }
   }
