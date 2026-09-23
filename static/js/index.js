@@ -30,6 +30,7 @@ const WRITEUPS = [
   {
     slug: "mr-robot",
     cover: "static/assets/covers/mr-robot.jpg",
+    coverFit: "contain",
     title: "Mr. Robot",
     platform: "thm",
     difficulty: "medium",
@@ -39,6 +40,20 @@ const WRITEUPS = [
     desc: "WordPress theme-editor reverse shell, an MD5 hash crack, and a SUID nmap privesc to root.",
     tags: ["wordpress", "john", "suid", "nmap"],
     url: "mr-robot.html"
+  },
+  {
+    slug: "anaximandre",
+    cover: "static/assets/covers/anaximandre.jpg",
+    coverFit: "contain",
+    coverBg: "#000",
+    title: "Anaximandre",
+    platform: "hmv",
+    difficulty: "medium",
+    date: "2026-09-18",
+    room: "https://hackmyvm.eu/",
+    desc: "WordPress weak creds, LFI to RCE via log poisoning, an rsync backup pivot, and a sudo cat privesc to root.",
+    tags: ["wordpress", "lfi", "rsync", "sudo"],
+    url: "anaximandre.html"
   },
   {
     slug: "wonderland",
@@ -141,7 +156,7 @@ tcTypeLoop();
 /* ---------- render cards ---------- */
 const grid = document.getElementById("card-grid");
 const emptyState = document.getElementById("empty-state");
-const platformLabel = { thm: "TryHackMe", vh: "VulnHub" };
+const platformLabel = { thm: "TryHackMe", vh: "VulnHub", hmv: "HackMyVM" };
 
 function renderCards(list){
   grid.innerHTML = "";
@@ -154,7 +169,7 @@ function renderCards(list){
         <span class="platform-tag"><span class="platform-dot ${w.platform}"></span>${platformLabel[w.platform]}</span>
         <span class="difficulty ${w.difficulty}">${w.difficulty}</span>
       </div>
-      <div class="card-cover-wrap">
+      <div class="card-cover-wrap${w.coverFit === "contain" ? " fit-contain" : ""}"${w.coverBg ? ` style="background:${w.coverBg}"` : ""}>
         <img class="card-cover" src="${w.cover}" alt="${w.title} cover" onerror="this.closest('.card-cover-wrap').classList.add('missing')">
         <div class="card-cover-fallback">
           <strong>No cover image</strong>
@@ -176,6 +191,7 @@ function updateStats(){
   document.getElementById("stat-total").textContent = WRITEUPS.length;
   document.getElementById("stat-thm").textContent = WRITEUPS.filter(w => w.platform === "thm").length;
   document.getElementById("stat-vh").textContent = WRITEUPS.filter(w => w.platform === "vh").length;
+  document.getElementById("stat-hmv").textContent = WRITEUPS.filter(w => w.platform === "hmv").length;
 }
 
 let activeFilter = "all";
