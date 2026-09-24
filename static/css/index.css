@@ -287,16 +287,58 @@
   /* ---------- footer ---------- */
   footer{
     border-top:1px solid var(--border);
-    padding:34px 24px 50px;
+    padding:34px 0 0;
+    overflow:hidden;
   }
   .footer-inner{
     max-width:1100px; margin:0 auto;
-    display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between;
+    display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:center;
     color:var(--text-dim); font-size:12px;
+    padding:0 24px 26px;
   }
-  .footer-links{display:flex; gap:18px;}
-  .footer-links a{text-decoration:none; color:var(--text-dim); transition:color .15s ease;}
-  .footer-links a:hover{color:var(--green);}
+
+  .platform-marquee{
+    position:relative;
+    width:100%;
+    overflow:hidden;
+    padding:16px 0 30px;
+    border-top:1px dashed var(--border);
+    -webkit-mask-image:linear-gradient(to right, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%);
+    mask-image:linear-gradient(to right, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%);
+  }
+  .marquee-track{
+    display:flex; width:max-content;
+    animation:marquee-scroll 22s linear infinite;
+  }
+  .platform-marquee:hover .marquee-track{ animation-play-state:paused; }
+  .marquee-set{ display:flex; align-items:center; flex-shrink:0; }
+  @keyframes marquee-scroll{
+    from{ transform:translateX(0); }
+    to{ transform:translateX(-16.6667%); }
+  }
+  .marquee-item{
+    display:flex; align-items:center; gap:9px;
+    padding:0 22px;
+    text-decoration:none;
+    color:var(--text-dim);
+    font-size:13px; font-weight:700; letter-spacing:.03em;
+    white-space:nowrap;
+    transition:color .15s ease, filter .15s ease;
+  }
+  .marquee-item svg{ width:18px; height:18px; flex-shrink:0; opacity:.9; }
+  .marquee-item.thm{ color:var(--cyan); }
+  .marquee-item.vh{ color:var(--magenta); }
+  .marquee-item.hmv{ color:var(--amber); }
+  .marquee-item:hover{ filter:drop-shadow(0 0 6px currentColor); color:#eafff2; }
+  .marquee-item.thm:hover{ color:var(--cyan); }
+  .marquee-item.vh:hover{ color:var(--magenta); }
+  .marquee-item.hmv:hover{ color:var(--amber); }
+  .marquee-sep{ color:var(--border); font-size:12px; }
+
+  @media (prefers-reduced-motion: reduce){
+    .marquee-track{ animation:none; }
+    .platform-marquee{ overflow-x:auto; }
+  }
 
   @media (max-width:640px){
     .hero-inner{padding:70px 18px 56px;}
